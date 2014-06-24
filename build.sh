@@ -20,8 +20,30 @@ if [[ $arch != x64 ]]; then
 	exit 1
 fi
 
+
+case "$(uname)" in
+	SunOS)
+		prefix=/opt/custom
+		make=make
+		checksum=sha256sum
+		;;
+	Linux)
+		prefix=/usr/local
+		make=make
+		checksum=sha256sum
+		;;
+	FreeBSD)
+		pkg install -y autoconf
+		prefix=/usr/local
+		make=gmake
+		checksum=sha256
+		;;
+esac
+configure_opts+=(--prefix=$prefix)
+
+
 echo '> cleaning up previous builds'
-make clean > /dev/null
+$make clean > /dev/null
 
 echo '> prepping jemalloc'
 if [[ ! -d deps/jemalloc/.git ]]; then
@@ -31,18 +53,13 @@ fi
 (
 cd deps/jemalloc &&
 ./autogen.sh --with-jemalloc-prefix=je_ > /dev/null &&
-make > /dev/null
+$make > /dev/null
 ) || exit 1
 
 echo '> running make'
-make MALLOC=jemalloc V=1 > /dev/null || exit 1
-
-echo "> copying files to $out"
-mkdir -p "$out/bin"
-for f in "${binaries[@]}"; do
-	mv "src/$f" "$out/bin" || exit 1
-done
+mkdir -p "$out"
+$make PREFIX="$out$prefix" install MALLOC=jemalloc V=1 > /dev/null || exit 1
 
 echo "> redis built in $SECONDS seconds, saved to $out"
 echo
-cd "$out/bin" && sha256sum "${binaries[@]}"
+cd "$out$prefix/bin" && $checksum "${binaries[@]}"
