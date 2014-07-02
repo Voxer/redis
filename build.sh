@@ -23,7 +23,7 @@ fi
 
 case "$(uname)" in
 	SunOS)
-		prefix=/opt/custom
+		prefix=/opt/local
 		make=make
 		checksum=sha256sum
 		;;
